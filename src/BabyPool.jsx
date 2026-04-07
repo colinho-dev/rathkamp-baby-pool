@@ -442,23 +442,6 @@ export default function BabyPool() {
           </div>
         </div>
 
-        {/* ── STATS ── */}
-        {guesses.length > 0 && (
-          <div className="bp-stats" style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10, marginBottom:24, animation:"slideUp .65s .08s ease both" }}>
-            {[
-              {label:"Guesses", val:guesses.length, Icon:Users},
-              {label:"Earliest", val:fmt([...guesses].map(g=>g.date).sort()[0]), Icon:ArrowUp},
-              {label:"Latest",   val:fmt([...guesses].map(g=>g.date).sort().slice(-1)[0]), Icon:ArrowDown},
-            ].map(({label,val,Icon}) => (
-              <div key={label} style={{ background:"rgba(255,255,255,0.03)", border:"1px solid rgba(125,216,255,0.11)", borderTop:"2px solid rgba(125,216,255,0.32)", borderRadius:16, padding:"14px 10px", textAlign:"center", backdropFilter:"blur(10px)" }}>
-                <div style={{ display:"flex", justifyContent:"center", marginBottom:6 }}><Icon size={16} color="rgba(125,200,245,0.55)" /></div>
-                <div style={{ fontSize:"1.05rem", fontWeight:700, color:"#fff", lineHeight:1.1 }}>{val}</div>
-                <div style={{ fontSize:"0.65rem", color:"rgba(125,200,245,0.5)", textTransform:"uppercase", letterSpacing:".07em", marginTop:4 }}>{label}</div>
-              </div>
-            ))}
-          </div>
-        )}
-
         {/* ── TABS ── */}
         {(() => {
           const TABS = [
@@ -504,7 +487,7 @@ export default function BabyPool() {
                     <Field label="Your Name *" icon={<User size={12}/>}>
                       <Input placeholder="e.g. Aunt Sarah" value={form.name} onChange={v=>setForm({...form,name:v})} />
                     </Field>
-                    <div className="bp-two-col" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
                       <Field label="Birth Date *" icon={<Calendar size={12}/>}>
                         <Input type="date" value={form.date} onChange={v=>setForm({...form,date:v})} />
                       </Field>
@@ -584,9 +567,9 @@ export default function BabyPool() {
                           <span style={{ fontSize:"0.65rem", fontWeight:700, color:CHIP_COLORS[i % CHIP_COLORS.length], background:`${CHIP_COLORS[i % CHIP_COLORS.length]}18`, border:`1px solid ${CHIP_COLORS[i % CHIP_COLORS.length]}40`, borderRadius:6, padding:"2px 7px", letterSpacing:".04em" }}>#{guesses.length - i}</span>
                           <span style={{ fontFamily:"'Fraunces',Georgia,serif", fontSize:"1.22rem", fontWeight:700, color:"#fff" }}>{g.name}</span>
                         </div>
-                        <span style={{ fontSize:"0.7rem", color:"rgba(125,200,245,0.38)", fontWeight:500 }}>{new Date(g.submittedAt).toLocaleDateString()}</span>
+                        <span style={{ fontSize:"0.7rem", color:"rgba(125,200,245,0.38)", fontWeight:500 }}>{new Date(g.submitted_at).toLocaleDateString()}</span>
                       </div>
-                      <p style={{ color:"rgba(160,215,255,0.78)", fontSize:"1rem", lineHeight:1.75, marginBottom:(g.name_guess||g.message)?12:0 }}>
+                      <p style={{ color:"rgba(160,215,255,0.78)", fontSize:"1.1rem", lineHeight:1.7, marginBottom:(g.name_guess||g.message)?12:0 }}>
                         Baby{g.name_guess ? <> <strong style={{ color:"#fff", fontStyle:"normal" }}>{g.name_guess}</strong></> : ""} will arrive on{" "}
                         <strong style={{ color:"#fff", fontStyle:"normal" }}>{fmt(g.date)}</strong> at{" "}
                         <strong style={{ color:"#fff", fontStyle:"normal" }}>{fmtT(g.time)}</strong>
@@ -608,6 +591,23 @@ export default function BabyPool() {
                 </div>
               )
             }
+          </div>
+        )}
+
+        {/* ── STATS ── */}
+        {guesses.length > 0 && (
+          <div className="bp-stats" style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10, marginTop:32, marginBottom:24 }}>
+            {[
+              {label:"Guesses", val:guesses.length, Icon:Users},
+              {label:"Earliest", val:fmt([...guesses].map(g=>g.date).sort()[0]), Icon:ArrowUp},
+              {label:"Latest",   val:fmt([...guesses].map(g=>g.date).sort().slice(-1)[0]), Icon:ArrowDown},
+            ].map(({label,val,Icon}) => (
+              <div key={label} style={{ background:"rgba(255,255,255,0.03)", border:"1px solid rgba(125,216,255,0.11)", borderTop:"2px solid rgba(125,216,255,0.32)", borderRadius:16, padding:"14px 10px", textAlign:"center", backdropFilter:"blur(10px)" }}>
+                <div style={{ display:"flex", justifyContent:"center", marginBottom:6 }}><Icon size={16} color="rgba(125,200,245,0.55)" /></div>
+                <div style={{ fontSize:"1.05rem", fontWeight:700, color:"#fff", lineHeight:1.1 }}>{val}</div>
+                <div style={{ fontSize:"0.65rem", color:"rgba(125,200,245,0.5)", textTransform:"uppercase", letterSpacing:".07em", marginTop:4 }}>{label}</div>
+              </div>
+            ))}
           </div>
         )}
 
