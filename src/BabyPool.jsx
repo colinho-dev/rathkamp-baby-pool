@@ -392,7 +392,7 @@ export default function BabyPool() {
           .bp-card{border-radius:0!important;border-left-width:3px!important}
           .bp-tabs{border-radius:0!important;border-left:none!important;border-right:none!important;margin-bottom:0!important}
           .bp-stats-wrap{padding:0 16px}
-          .bp-gear{bottom:60px!important}
+          .bp-gear{bottom:20px!important;right:16px!important}
         }
       `}</style>
 
