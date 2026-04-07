@@ -1,4 +1,10 @@
 import { useState, useEffect } from "react";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
 import { User, Calendar, Clock, Scale, Ruler, Sparkles, Mail, KeyRound, Baby, Heart, Lock, Save, Settings, Pencil, LayoutList, Users, ArrowUp, ArrowDown, PartyPopper, Star } from "lucide-react";
 
 const STORAGE_KEY = "rachel-baby-pool-v2";
@@ -283,30 +289,46 @@ export default function BabyPool() {
   const [adminOpen, setAdminOpen]       = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) { const d=JSON.parse(raw); setGuesses(d.guesses||[]); if(d.poolInfo) setPoolInfo(d.poolInfo); }
-    } catch {}
+    async function load() {
+      const { data } = await supabase
+        .from("guesses")
+        .select("*")
+        .order("submitted_at", { ascending: true });
+      if (data) setGuesses(data);
+    }
+    load();
   }, []);
 
   function persist(g, p) {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ guesses:g, poolInfo:p })); } catch {}
+    // no-op — data lives in Supabase now
   }
 
   function canSubmit() { return form.name && form.date && form.time && form.weight && form.nameGuess; }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!canSubmit()) return;
-    const g = { id:Date.now(), ...form, submittedAt:new Date().toISOString() };
-    const updated = [...guesses, g];
-    setGuesses(updated); persist(updated, poolInfo);
+    const { data, error } = await supabase
+      .from("guesses")
+      .insert([{
+        name: form.name,
+        date: form.date,
+        time: form.time,
+        weight: form.weight,
+        length: form.length,
+        name_guess: form.nameGuess,
+        message: form.message,
+      }])
+      .select();
+    if (error) { alert("Something went wrong, please try again."); return; }
+    if (data) setGuesses(prev => [...prev, data[0]]);
     setBurst(b => b+1);
     setSubmitted(true);
     setForm(emptyForm());
   }
 
-  function delGuess(id) {
-    const u = guesses.filter(g=>g.id!==id); setGuesses(u); persist(u, poolInfo);
+  async function delGuess(id) {
+    await supabase.from("guesses").delete().eq("id", id);
+    setGuesses(prev => prev.filter(g => g.id !== id));
   }
 
   const fmt  = d => { if(!d)return"—"; const [y,m,dy]=d.split("-"); return `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+m-1]} ${+dy}, ${y}`; };
@@ -564,8 +586,8 @@ export default function BabyPool() {
                         </div>
                         <span style={{ fontSize:"0.7rem", color:"rgba(125,200,245,0.38)", fontWeight:500 }}>{new Date(g.submittedAt).toLocaleDateString()}</span>
                       </div>
-                      <p style={{ color:"rgba(160,215,255,0.78)", fontSize:"1rem", lineHeight:1.75, marginBottom:(g.nameGuess||g.message)?12:0 }}>
-                        Baby{g.nameGuess ? <> <strong style={{ color:"#fff", fontStyle:"normal" }}>{g.nameGuess}</strong></> : ""} will arrive on{" "}
+                      <p style={{ color:"rgba(160,215,255,0.78)", fontSize:"1rem", lineHeight:1.75, marginBottom:(g.name_guess||g.message)?12:0 }}>
+                        Baby{g.name_guess ? <> <strong style={{ color:"#fff", fontStyle:"normal" }}>{g.name_guess}</strong></> : ""} will arrive on{" "}
                         <strong style={{ color:"#fff", fontStyle:"normal" }}>{fmt(g.date)}</strong> at{" "}
                         <strong style={{ color:"#fff", fontStyle:"normal" }}>{fmtT(g.time)}</strong>
                         {g.length
