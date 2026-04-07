@@ -180,12 +180,12 @@ const inputBase = {
   fontSize:"0.92rem", fontFamily:"'DM Sans',system-ui,sans-serif",
 };
 
-function Input({ type="text", value, onChange, placeholder, onEnter }) {
+function Input({ type="text", value, onChange, placeholder, onEnter, style }) {
   return (
     <input type={type} className="bp-input" value={value}
       onChange={e=>onChange(e.target.value)} placeholder={placeholder}
       onKeyDown={e=>e.key==="Enter"&&onEnter?.()}
-      style={inputBase}
+      style={{ ...inputBase, ...style }}
     />
   );
 }
@@ -380,7 +380,6 @@ export default function BabyPool() {
         input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(.5) sepia(1) saturate(3) hue-rotate(170deg);cursor:pointer}
         select.bp-select{-webkit-appearance:none;appearance:none;padding-right:32px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(125,216,255,0.55)'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
         select.bp-select option{background:#0a1e3d;color:#fff}
-        @media(max-width:540px){.bp-sparkle{display:none!important}}
         @media(max-width:480px){
           .bp-two-col{grid-template-columns:1fr!important}
           .bp-stats{grid-template-columns:1fr!important}
@@ -489,10 +488,10 @@ export default function BabyPool() {
                     </Field>
                     <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
                       <Field label="Birth Date *" icon={<Calendar size={12}/>}>
-                        <Input type="date" value={form.date} onChange={v=>setForm({...form,date:v})} />
+                        <Input type="date" value={form.date} onChange={v=>setForm({...form,date:v})} style={{ width:"100%", minWidth:0 }} />
                       </Field>
                       <Field label="Birth Time *" icon={<Clock size={12}/>}>
-                        <Input type="time" value={form.time} onChange={v=>setForm({...form,time:v})} />
+                        <Input type="time" value={form.time} onChange={v=>setForm({...form,time:v})} style={{ width:"100%", minWidth:0 }} />
                       </Field>
                     </div>
                     <div className="bp-two-col" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
