@@ -238,7 +238,7 @@ function Field({ label, icon, children }) {
 
 function GlassCard({ children, style={} }) {
   return (
-    <div style={{
+    <div className="bp-glass-card" style={{
       background:"rgba(255,255,255,0.045)",
       border:"1px solid rgba(125,216,255,0.14)",
       borderRadius:24, padding:"28px 26px",
@@ -384,16 +384,23 @@ export default function BabyPool() {
           .bp-two-col{grid-template-columns:1fr!important}
           .bp-stats{grid-template-columns:1fr!important}
         }
+        @media(max-width:600px){
+          .bp-container{padding-left:0!important;padding-right:0!important}
+          .bp-hero{padding:0 20px}
+          .bp-glass-card{border-radius:0!important;border-left:none!important;border-right:none!important}
+          .bp-card{border-radius:0!important;border-left-width:3px!important}
+          .bp-stats-wrap{padding:0 16px}
+        }
       `}</style>
 
       <Bubbles />
       <Grain />
       <Confetti burst={burst} />
 
-      <div style={{ position:"relative", zIndex:1, maxWidth:780, margin:"0 auto", padding:"48px 24px 100px" }}>
+      <div className="bp-container" style={{ position:"relative", zIndex:1, maxWidth:780, margin:"0 auto", padding:"48px 24px 100px" }}>
 
         {/* ── HERO ── */}
-        <div style={{ textAlign:"center", marginBottom:40, animation:"slideUp .65s ease both", position:"relative" }}>
+        <div className="bp-hero" style={{ textAlign:"center", marginBottom:40, animation:"slideUp .65s ease both", position:"relative" }}>
 
           {/* Sparkles — hidden on mobile */}
           {HERO_SPARKLES.map((sp,i) => (
@@ -479,7 +486,7 @@ export default function BabyPool() {
               : (
                 <GlassCard>
                   <div style={{ marginBottom:26 }}>
-                    <h2 style={{ fontFamily:"'Fraunces',Georgia,serif", fontSize:"1.85rem", fontWeight:700, color:"#fff", marginBottom:5 }}>Your Prediction</h2>
+                    <h2 style={{ fontFamily:"'Fraunces',Georgia,serif", fontSize:"1.85rem", fontWeight:700, color:"#fff", marginBottom:5 }}>Your prediction</h2>
                     <p style={{ color:"rgba(125,200,245,0.55)", fontSize:"0.85rem" }}>Fields marked * are required.</p>
                   </div>
                   <div style={{ display:"grid", gap:18 }}>
@@ -523,7 +530,7 @@ export default function BabyPool() {
                         boxShadow: canSubmit() ? "0 4px 20px rgba(91,196,245,0.3)" : "none",
                         transition:"all .25s", letterSpacing:".02em",
                       }}>
-                      <span style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}><Lock size={16} />Lock In My Guess</span>
+                      <span style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}><Lock size={16} />Lock in my guess</span>
                     </button>
                     {!canSubmit() && (
                       <p style={{ textAlign:"center", fontSize:"0.76rem", color:"rgba(125,200,245,0.4)", marginTop:10 }}>
@@ -595,7 +602,8 @@ export default function BabyPool() {
 
         {/* ── STATS ── */}
         {guesses.length > 0 && (
-          <div className="bp-stats" style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10, marginTop:32, marginBottom:24 }}>
+          <div className="bp-stats-wrap" style={{ marginTop:32, marginBottom:24 }}>
+          <div className="bp-stats" style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10 }}>
             {[
               {label:"Guesses", val:guesses.length, Icon:Users},
               {label:"Earliest", val:fmt([...guesses].map(g=>g.date).sort()[0]), Icon:ArrowUp},
@@ -607,6 +615,7 @@ export default function BabyPool() {
                 <div style={{ fontSize:"0.65rem", color:"rgba(125,200,245,0.5)", textTransform:"uppercase", letterSpacing:".07em", marginTop:4 }}>{label}</div>
               </div>
             ))}
+          </div>
           </div>
         )}
 
