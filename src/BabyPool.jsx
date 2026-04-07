@@ -17,7 +17,7 @@ const SHAPES = ["circle","rect","star"];
 // Generated once at module load so values are stable across renders
 // 5 bubbles at fixed x positions so they never overlap
 // Sizes kept small enough that adjacent lanes don't collide
-const BUBBLE_LANES = [8, 26, 46, 66, 84];
+const BUBBLE_LANES = [5, 17, 31, 46, 58, 72, 88];
 const BUBBLES = BUBBLE_LANES.map((xPos, i) => {
   const size = 70 + Math.random() * 60; // 70–130px — fits comfortably in each lane
   return {
@@ -376,6 +376,7 @@ export default function BabyPool() {
         .bp-card:hover{transform:translateY(-3px);box-shadow:0 14px 44px rgba(0,0,0,0.45), 0 0 28px rgba(125,216,255,0.1), 0 0 0 1px rgba(125,216,255,0.16)!important}
         .bp-del:hover{background:rgba(255,90,90,0.18)!important;border-color:rgba(255,90,90,0.45)!important;color:rgba(255,140,140,0.95)!important}
         .bp-ghost-btn:hover{background:rgba(125,216,255,0.18)!important}
+        input[type="date"],input[type="time"]{width:100%!important;box-sizing:border-box!important}
         input[type="date"]::-webkit-calendar-picker-indicator,
         input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(.5) sepia(1) saturate(3) hue-rotate(170deg);cursor:pointer}
         select.bp-select{-webkit-appearance:none;appearance:none;padding-right:32px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(125,216,255,0.55)'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
