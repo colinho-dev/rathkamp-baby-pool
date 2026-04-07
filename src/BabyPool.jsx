@@ -227,7 +227,7 @@ function LengthPicker({ value, onChange }) {
 
 function Field({ label, icon, children }) {
   return (
-    <div>
+    <div style={{ minWidth:0 }}>
       <label style={{ display:"flex", alignItems:"center", gap:6, fontSize:"0.7rem", fontWeight:700, color:"rgba(125,216,255,0.72)", textTransform:"uppercase", letterSpacing:".09em", marginBottom:7 }}>
         {icon}{label}
       </label>
@@ -493,12 +493,12 @@ export default function BabyPool() {
                     <Field label="Your Name *" icon={<User size={12}/>}>
                       <Input placeholder="e.g. Aunt Sarah" value={form.name} onChange={v=>setForm({...form,name:v})} />
                     </Field>
-                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, minWidth:0 }}>
                       <Field label="Birth Date *" icon={<Calendar size={12}/>}>
-                        <Input type="date" value={form.date} onChange={v=>setForm({...form,date:v})} style={{ width:"100%", minWidth:0 }} />
+                        <Input type="date" value={form.date} onChange={v=>setForm({...form,date:v})} style={{ display:"block", width:"100%", minWidth:0 }} />
                       </Field>
                       <Field label="Birth Time *" icon={<Clock size={12}/>}>
-                        <Input type="time" value={form.time} onChange={v=>setForm({...form,time:v})} style={{ width:"100%", minWidth:0 }} />
+                        <Input type="time" value={form.time} onChange={v=>setForm({...form,time:v})} style={{ display:"block", width:"100%", minWidth:0 }} />
                       </Field>
                     </div>
                     <div className="bp-two-col" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
