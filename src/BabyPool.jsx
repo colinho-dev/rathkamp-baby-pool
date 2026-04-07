@@ -390,7 +390,9 @@ export default function BabyPool() {
           .bp-hero{padding:0 20px}
           .bp-glass-card{border-radius:0!important;border-left:none!important;border-right:none!important}
           .bp-card{border-radius:0!important;border-left-width:3px!important}
+          .bp-tabs{border-radius:0!important;border-left:none!important;border-right:none!important;margin-bottom:0!important}
           .bp-stats-wrap{padding:0 16px}
+          .bp-gear{bottom:88px!important}
         }
       `}</style>
 
@@ -398,21 +400,23 @@ export default function BabyPool() {
       <Grain />
       <Confetti burst={burst} />
 
+      {/* Sparkles — fixed overlay so they cover full screen including top */}
+      <div style={{ position:"fixed", inset:0, pointerEvents:"none", zIndex:0, overflow:"hidden" }}>
+        {HERO_SPARKLES.map((sp,i) => (
+          <span key={i} style={{
+            position:"absolute", left:sp.x, top:sp.y,
+            color:"rgba(160,225,255,0.9)",
+            filter:"drop-shadow(0 0 6px rgba(125,216,255,0.8)) drop-shadow(0 0 16px rgba(125,216,255,0.4))",
+            animation:`sparkle ${7+sp.d}s ${sp.d}s ease-in-out infinite`,
+            pointerEvents:"none", display:"inline-flex",
+          }}><Star size={sp.s} fill="rgba(160,225,255,0.9)" strokeWidth={0} /></span>
+        ))}
+      </div>
+
       <div className="bp-container" style={{ position:"relative", zIndex:1, maxWidth:780, margin:"0 auto", padding:"48px 24px 100px" }}>
 
         {/* ── HERO ── */}
         <div className="bp-hero" style={{ textAlign:"center", marginBottom:40, animation:"slideUp .65s ease both", position:"relative" }}>
-
-          {/* Sparkles — hidden on mobile */}
-          {HERO_SPARKLES.map((sp,i) => (
-            <span key={i} className="bp-sparkle" style={{
-              position:"absolute", left:sp.x, top:sp.y,
-              color:"rgba(160,225,255,0.9)",
-              filter:"drop-shadow(0 0 6px rgba(125,216,255,0.8)) drop-shadow(0 0 16px rgba(125,216,255,0.4))",
-              animation:`sparkle ${7+sp.d}s ${sp.d}s ease-in-out infinite`,
-              pointerEvents:"none", display:"inline-flex",
-            }}><Star size={sp.s} fill="rgba(160,225,255,0.9)" strokeWidth={0} /></span>
-          ))}
 
           {/* Countdown up top */}
           {daysLeft !== null && (
@@ -457,7 +461,7 @@ export default function BabyPool() {
           ];
           const activeIdx = TABS.findIndex(t=>t.k===tab);
           return (
-            <div style={{ position:"relative", display:"flex", gap:4, background:"rgba(255,255,255,0.03)", border:"1px solid rgba(125,216,255,0.1)", borderRadius:18, padding:5, marginBottom:24, backdropFilter:"blur(12px)", animation:"slideUp .65s .14s ease both" }}>
+            <div className="bp-tabs" style={{ position:"relative", display:"flex", gap:4, background:"rgba(255,255,255,0.03)", border:"1px solid rgba(125,216,255,0.1)", borderRadius:18, padding:5, marginBottom:24, backdropFilter:"blur(12px)", animation:"slideUp .65s .14s ease both" }}>
               {/* sliding pill */}
               <div style={{
                 position:"absolute", top:5, bottom:5,
@@ -628,7 +632,7 @@ export default function BabyPool() {
       </div>
 
       {/* ── FLOATING GEAR BUTTON ── */}
-      <button onClick={()=>setAdminOpen(true)}
+      <button className="bp-gear" onClick={()=>setAdminOpen(true)}
         style={{ position:"fixed", bottom:24, right:24, zIndex:200, width:44, height:44, borderRadius:"50%", border:"1px solid rgba(125,216,255,0.15)", background:"rgba(6,14,30,0.7)", backdropFilter:"blur(12px)", color:"rgba(125,200,245,0.4)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"all .2s", boxShadow:"0 4px 20px rgba(0,0,0,0.4)" }}
         onMouseEnter={e=>{e.currentTarget.style.color="rgba(125,216,255,0.8)";e.currentTarget.style.borderColor="rgba(125,216,255,0.35)";}}
         onMouseLeave={e=>{e.currentTarget.style.color="rgba(125,200,245,0.4)";e.currentTarget.style.borderColor="rgba(125,216,255,0.15)";}}>
