@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
-import { User, Calendar, Clock, Scale, Ruler, Sparkles, Mail, KeyRound, Baby, Heart, Lock, Save, Settings, Pencil, LayoutList, Users, ArrowUp, ArrowDown, PartyPopper, Star } from "lucide-react";
+import { User, Calendar, Clock, Scale, Ruler, Sparkles, Mail, KeyRound, Baby, Heart, Lock, Save, Settings, Pencil, LayoutList, Users, ArrowUp, ArrowDown, PartyPopper, Star, Trophy } from "lucide-react";
 
 const STORAGE_KEY = "rachel-baby-pool-v2";
 
@@ -14,18 +14,15 @@ const CONFETTI_COLORS = [
 ];
 const SHAPES = ["circle","rect","star"];
 
-// Generated once at module load so values are stable across renders
-// 5 bubbles at fixed x positions so they never overlap
-// Sizes kept small enough that adjacent lanes don't collide
 const BUBBLE_LANES = [5, 17, 31, 46, 58, 72, 88];
 const BUBBLES = BUBBLE_LANES.map((xPos, i) => {
-  const size = 70 + Math.random() * 60; // 70–130px — fits comfortably in each lane
+  const size = 70 + Math.random() * 60;
   return {
     id: i,
     size,
-    x: xPos + (Math.random() - 0.5) * 4, // tiny nudge so they don't look robotic
-    dur: 38 + Math.random() * 22,          // 38–60s — slow but visibly moving
-    delay: -(i * 11 + Math.random() * 8), // stagger so no two are at same height
+    x: xPos + (Math.random() - 0.5) * 4,
+    dur: 38 + Math.random() * 22,
+    delay: -(i * 11 + Math.random() * 8),
     wobbleAmp: 10 + Math.random() * 14,
     wobbleDur: 5 + Math.random() * 5,
     borderOpacity:    +(0.20 + Math.random() * 0.18).toFixed(2),
@@ -35,41 +32,69 @@ const BUBBLES = BUBBLE_LANES.map((xPos, i) => {
 });
 
 const HERO_SPARKLES = [
-  // top-left large oval zone
   { x:"4%",  y:"2%",  s:11, d:3.1 },
   { x:"12%", y:"7%",  s:16, d:0.4 },
   { x:"20%", y:"3%",  s:10, d:1.7 },
   { x:"7%",  y:"14%", s:20, d:0.0 },
   { x:"24%", y:"11%", s:13, d:2.5 },
-  // top-right oval zone
   { x:"76%", y:"4%",  s:11, d:1.3 },
   { x:"84%", y:"2%",  s:14, d:0.7 },
   { x:"91%", y:"9%",  s:18, d:2.0 },
   { x:"97%", y:"5%",  s:10, d:3.3 },
   { x:"80%", y:"16%", s:16, d:1.1 },
-  // upper-left small oval zone
   { x:"3%",  y:"28%", s:13, d:1.5 },
   { x:"9%",  y:"35%", s:10, d:2.8 },
-  // red circle 1 — left-center
   { x:"25%", y:"24%", s:16, d:0.9 },
   { x:"30%", y:"32%", s:11, d:2.3 },
-  // red circle 2 — right-center
   { x:"65%", y:"22%", s:14, d:1.6 },
   { x:"70%", y:"30%", s:12, d:3.0 },
-  // red circle 3 — far right
   { x:"88%", y:"26%", s:15, d:0.5 },
   { x:"93%", y:"33%", s:10, d:2.1 },
-  // left-middle oval zone
   { x:"5%",  y:"55%", s:14, d:0.6 },
-  // bottom-left oval zone
   { x:"10%", y:"82%", s:16, d:1.8 },
-  // right side scatter
   { x:"78%", y:"30%", s:10, d:1.9 },
   { x:"93%", y:"44%", s:13, d:1.4 },
   { x:"87%", y:"62%", s:18, d:0.5 },
-  // bottom-right large oval zone
   { x:"88%", y:"78%", s:15, d:0.3 },
 ];
+
+// ── Scoring helpers ──────────────────────────────────────────────────────────
+
+function weightToOz(w) {
+  const m = (w || "").match(/^(\d+)\s*lbs\s*(\d+)\s*oz$/);
+  return m ? (+m[1] * 16) + +m[2] : null;
+}
+
+function lengthToIn(l) {
+  const m = (l || "").match(/^([\d.]+)\s*in$/);
+  return m ? +m[1] : null;
+}
+
+function toMoment(date, time) {
+  if (!date || !time) return null;
+  return new Date(`${date}T${time}:00`);
+}
+
+function findWinners(guesses, scoreFn) {
+  const scored = guesses
+    .map(g => ({ g, score: scoreFn(g) }))
+    .filter(x => x.score !== null && Number.isFinite(x.score));
+  if (!scored.length) return [];
+  const min = Math.min(...scored.map(x => x.score));
+  return scored.filter(x => x.score === min);
+}
+
+function fmtMinutes(mins) {
+  if (mins === 0) return "exact!";
+  const d = Math.floor(mins / 1440);
+  const h = Math.floor((mins % 1440) / 60);
+  const m = Math.round(mins % 60);
+  if (d > 0) return `${d}d ${h}h off`;
+  if (h > 0) return `${h}h ${m}m off`;
+  return `${m}m off`;
+}
+
+// ── Visual components ────────────────────────────────────────────────────────
 
 function Confetti({ burst }) {
   const [pieces, setPieces] = useState([]);
@@ -109,7 +134,6 @@ function Confetti({ burst }) {
   );
 }
 
-// Glass soap bubbles — outer div falls, inner div wobbles, innermost is the visual
 function Bubbles() {
   return (
     <div style={{ position:"fixed", inset:0, pointerEvents:"none", zIndex:0, overflow:"hidden" }}>
@@ -136,13 +160,9 @@ function Bubbles() {
               width:b.size, height:b.size, borderRadius:"50%",
               border:`1.5px solid rgba(175,230,255,${b.borderOpacity})`,
               background:[
-                // Primary highlight — top-left specular
                 `radial-gradient(circle at 28% 26%, rgba(255,255,255,${b.highlightOpacity}), transparent 26%)`,
-                // Secondary reflection — bottom-right
                 `radial-gradient(circle at 72% 75%, rgba(100,195,255,${b.reflection2}), transparent 28%)`,
-                // Rim glow — top edge
                 `radial-gradient(circle at 50% 8%, rgba(210,240,255,0.09), transparent 20%)`,
-                // Subtle inner tint
                 `radial-gradient(circle at 50% 50%, rgba(125,216,255,0.03), transparent 65%)`,
               ].join(","),
               boxShadow:[
@@ -158,7 +178,6 @@ function Bubbles() {
   );
 }
 
-// Subtle film-grain overlay — barely visible but adds depth to the background
 function Grain() {
   return (
     <div style={{
@@ -275,9 +294,80 @@ function SuccessCard({ onReset }) {
   );
 }
 
+// ── Winner category card ─────────────────────────────────────────────────────
+
+function WinnerCard({ icon, label, winners, guessDisplay, actualDisplay, deltaDisplay, emptyMsg, animDelay=0 }) {
+  return (
+    <div style={{
+      background:"rgba(255,255,255,0.045)",
+      border:"1px solid rgba(125,216,255,0.18)",
+      borderTop:"2px solid rgba(255,213,80,0.55)",
+      borderRadius:20, padding:"22px 24px",
+      backdropFilter:"blur(18px)",
+      boxShadow:"0 6px 32px rgba(0,0,0,0.4), 0 0 40px rgba(255,213,80,0.04) inset",
+      animation:"slideUp .4s ease both",
+      animationDelay:`${animDelay}s`,
+    }}>
+      {/* Header */}
+      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:16 }}>
+        <span style={{ fontSize:"1.15rem" }}>{icon}</span>
+        <span style={{ fontSize:"0.72rem", fontWeight:700, color:"rgba(255,213,80,0.8)", textTransform:"uppercase", letterSpacing:".1em" }}>{label}</span>
+      </div>
+
+      {winners.length === 0 ? (
+        <p style={{ color:"rgba(125,200,245,0.45)", fontStyle:"italic", fontSize:"0.88rem" }}>{emptyMsg}</p>
+      ) : (
+        <>
+          {/* Winner names */}
+          <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:14 }}>
+            {winners.map(({ g }) => (
+              <div key={g.id} style={{ display:"flex", alignItems:"center", gap:7, background:"rgba(255,213,80,0.1)", border:"1px solid rgba(255,213,80,0.28)", borderRadius:10, padding:"5px 12px" }}>
+                <Trophy size={12} color="rgba(255,213,80,0.85)" />
+                <span style={{ fontFamily:"'Fraunces',Georgia,serif", fontWeight:700, color:"#fff", fontSize:"1.05rem" }}>{g.name}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Guess vs Actual */}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+            <div style={{ background:"rgba(125,216,255,0.05)", border:"1px solid rgba(125,216,255,0.1)", borderRadius:10, padding:"10px 13px" }}>
+              <div style={{ fontSize:"0.62rem", fontWeight:700, color:"rgba(125,200,245,0.5)", textTransform:"uppercase", letterSpacing:".08em", marginBottom:4 }}>
+                {winners.length === 1 ? "Their guess" : "Their guesses"}
+              </div>
+              {winners.map(({ g }) => (
+                <div key={g.id} style={{ color:"rgba(160,215,255,0.85)", fontSize:"0.88rem", lineHeight:1.5 }}>
+                  {guessDisplay(g)}
+                </div>
+              ))}
+            </div>
+            <div style={{ background:"rgba(255,213,80,0.06)", border:"1px solid rgba(255,213,80,0.18)", borderRadius:10, padding:"10px 13px" }}>
+              <div style={{ fontSize:"0.62rem", fontWeight:700, color:"rgba(255,213,80,0.55)", textTransform:"uppercase", letterSpacing:".08em", marginBottom:4 }}>Actual</div>
+              <div style={{ color:"rgba(255,230,140,0.9)", fontSize:"0.88rem", lineHeight:1.5 }}>{actualDisplay}</div>
+            </div>
+          </div>
+
+          {/* Delta */}
+          {deltaDisplay && (
+            <div style={{ marginTop:10, textAlign:"right" }}>
+              {winners.map(({ g, score }) => (
+                <span key={g.id} style={{ display:"inline-block", marginLeft:8, fontSize:"0.72rem", fontWeight:700, color:"rgba(125,216,255,0.6)", background:"rgba(125,216,255,0.07)", border:"1px solid rgba(125,216,255,0.15)", borderRadius:6, padding:"2px 8px" }}>
+                  {winners.length > 1 ? `${g.name}: ` : ""}{deltaDisplay(score)}
+                </span>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
+
 export default function BabyPool() {
   const [guesses, setGuesses]     = useState([]);
-  const [poolInfo, setPoolInfo]   = useState({ momName:"Rachel", dueDate:"2026-05-04", babyName:"" });
+  const [results, setResults]     = useState(null);
+  const [poolInfo, setPoolInfo]   = useState({ momName:"Rachel", dueDate:"2026-05-04" });
   const [tab, setTab]             = useState("guess");
   const [burst, setBurst]         = useState(0);
   const [submitted, setSubmitted] = useState(false);
@@ -285,23 +375,43 @@ export default function BabyPool() {
   const [adminOk, setAdminOk]           = useState(false);
   const [form, setForm]                 = useState(emptyForm());
   const [confirmDelete, setConfirmDelete] = useState(null);
-  const [savedMsg, setSavedMsg]         = useState(false);
   const [adminOpen, setAdminOpen]       = useState(false);
+  const [winnersConfettiFired, setWinnersConfettiFired] = useState(false);
+
+  // Admin results draft state
+  const [draftResults, setDraftResults] = useState({ actual_date:"", actual_time:"", actual_weight:"", actual_length:"", actual_name:"", revealed:false });
+  const [resultsSaving, setResultsSaving] = useState(false);
+  const [resultsSavedMsg, setResultsSavedMsg] = useState(false);
 
   useEffect(() => {
     async function load() {
-      const { data } = await supabase
-        .from("guesses")
-        .select("*")
-        .order("submitted_at", { ascending: true });
-      if (data) setGuesses(data);
+      const [{ data: guessData }, { data: resultsData }] = await Promise.all([
+        supabase.from("guesses").select("*").order("submitted_at", { ascending: true }),
+        supabase.from("pool_results").select("*").eq("id", 1).single(),
+      ]);
+      if (guessData) setGuesses(guessData);
+      if (resultsData) {
+        setResults(resultsData);
+        setDraftResults({
+          actual_date:   resultsData.actual_date   || "",
+          actual_time:   resultsData.actual_time   || "",
+          actual_weight: resultsData.actual_weight || "",
+          actual_length: resultsData.actual_length || "",
+          actual_name:   resultsData.actual_name   || "",
+          revealed:      resultsData.revealed      || false,
+        });
+      }
     }
     load();
   }, []);
 
-  function persist(g, p) {
-    // no-op — data lives in Supabase now
-  }
+  // Fire confetti once when winners tab first opens
+  useEffect(() => {
+    if (tab === "winners" && !winnersConfettiFired) {
+      setBurst(b => b + 1);
+      setWinnersConfettiFired(true);
+    }
+  }, [tab, winnersConfettiFired]);
 
   function canSubmit() { return form.name && form.date && form.time && form.weight && form.nameGuess; }
 
@@ -331,10 +441,28 @@ export default function BabyPool() {
     setGuesses(prev => prev.filter(g => g.id !== id));
   }
 
+  async function saveResults() {
+    setResultsSaving(true);
+    const payload = {
+      actual_date:   draftResults.actual_date   || null,
+      actual_time:   draftResults.actual_time   || null,
+      actual_weight: draftResults.actual_weight || null,
+      actual_length: draftResults.actual_length || null,
+      actual_name:   draftResults.actual_name   || null,
+      revealed:      draftResults.revealed,
+      revealed_at:   draftResults.revealed && !results?.revealed ? new Date().toISOString() : (results?.revealed_at || null),
+    };
+    const { data, error } = await supabase.from("pool_results").update(payload).eq("id", 1).select().single();
+    setResultsSaving(false);
+    if (error) { alert("Save failed, please try again."); return; }
+    setResults(data);
+    setResultsSavedMsg(true);
+    setTimeout(() => setResultsSavedMsg(false), 2500);
+  }
+
   const fmt  = d => { if(!d)return"—"; const [y,m,dy]=d.split("-"); return `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+m-1]} ${+dy}, ${y}`; };
   const fmtT = t => { if(!t)return"—"; const [h,m]=t.split(":"); return `${+h%12||12}:${m} ${+h>=12?"PM":"AM"}`; };
 
-  // Countdown to due date
   const daysLeft = (() => {
     if (!poolInfo.dueDate) return null;
     const today = new Date(); today.setHours(0,0,0,0);
@@ -342,7 +470,51 @@ export default function BabyPool() {
     return Math.ceil((due - today) / 86400000);
   })();
 
+  // ── Compute winners ────────────────────────────────────────────────────────
+  const { momentWinners, weightWinners, lengthWinners, nameWinners, winnerIds } = useMemo(() => {
+    if (!results?.revealed || !guesses.length) {
+      return { momentWinners:[], weightWinners:[], lengthWinners:[], nameWinners:[], winnerIds: new Set() };
+    }
+
+    const actualMoment = toMoment(results.actual_date, results.actual_time);
+    const actualOz     = weightToOz(results.actual_weight);
+    const actualIn     = lengthToIn(results.actual_length);
+    const actualName   = (results.actual_name || "").trim().toLowerCase();
+
+    const momentWinners = findWinners(guesses, g => {
+      const m = toMoment(g.date, g.time);
+      return m && actualMoment ? Math.abs(m - actualMoment) / 60000 : null;
+    });
+    const weightWinners = findWinners(guesses, g => {
+      const oz = weightToOz(g.weight);
+      return oz !== null && actualOz !== null ? Math.abs(oz - actualOz) : null;
+    });
+    const lengthWinners = findWinners(guesses, g => {
+      const inches = lengthToIn(g.length);
+      return inches !== null && actualIn !== null ? Math.abs(inches - actualIn) : null;
+    });
+    const nameWinners = findWinners(guesses, g => {
+      const b = (g.name_guess || "").trim().toLowerCase();
+      return actualName && b && actualName === b ? 0 : null;
+    });
+
+    const winnerIds = new Set([
+      ...momentWinners.map(x => x.g.id),
+      ...weightWinners.map(x => x.g.id),
+      ...lengthWinners.map(x => x.g.id),
+      ...nameWinners.map(x => x.g.id),
+    ]);
+
+    return { momentWinners, weightWinners, lengthWinners, nameWinners, winnerIds };
+  }, [guesses, results]);
+
   const CHIP_COLORS = ["#7DD8FF","#B0E4FF","#89D4F5","#60C8FF","#A0D8F5","#C8EEFF","#4BBCE8"];
+
+  const TABS = [
+    {k:"guess",       Icon:Pencil,     label:"Guess"},
+    {k:"leaderboard", Icon:LayoutList, label:`Board (${guesses.length})`},
+    ...(results?.revealed ? [{k:"winners", Icon:Trophy, label:"Winners"}] : []),
+  ];
 
   return (
     <div style={{ minHeight:"100vh", background:"linear-gradient(160deg,#060e1e 0%,#091830 38%,#0d2248 68%,#060f1c 100%)", fontFamily:"'DM Sans',system-ui,sans-serif", position:"relative", overflowX:"hidden" }}>
@@ -400,7 +572,6 @@ export default function BabyPool() {
       <Grain />
       <Confetti burst={burst} />
 
-      {/* Sparkles — fixed overlay so they cover full screen including top */}
       <div style={{ position:"fixed", inset:0, pointerEvents:"none", zIndex:0, overflow:"hidden" }}>
         {HERO_SPARKLES.map((sp,i) => (
           <span key={i} style={{
@@ -417,8 +588,6 @@ export default function BabyPool() {
 
         {/* ── HERO ── */}
         <div className="bp-hero" style={{ textAlign:"center", marginBottom:40, animation:"slideUp .65s ease both", position:"relative" }}>
-
-          {/* Countdown up top */}
           {daysLeft !== null && (
             <div style={{ display:"inline-flex", alignItems:"center", gap:7, background:"rgba(125,216,255,0.06)", border:"1px solid rgba(125,216,255,0.18)", borderRadius:10, padding:"6px 16px", marginBottom:22, animation:"countdownPulse 3s ease-in-out infinite" }}>
               <Calendar size={12} color="rgba(125,216,255,0.6)" />
@@ -437,7 +606,6 @@ export default function BabyPool() {
             When will Rachel and Joey's bundle of joy arrive?
           </p>
 
-          {/* Due date + It's a Boy down here */}
           <div style={{ display:"inline-flex", flexDirection:"column", alignItems:"center", gap:8 }}>
             {poolInfo.dueDate && (
               <div style={{ display:"inline-flex", alignItems:"center", gap:8, background:"rgba(125,216,255,0.09)", border:"1px solid rgba(125,216,255,0.2)", borderRadius:12, padding:"8px 18px" }}>
@@ -455,14 +623,9 @@ export default function BabyPool() {
 
         {/* ── TABS ── */}
         {(() => {
-          const TABS = [
-            {k:"guess",       Icon:Pencil,     label:"Guess"},
-            {k:"leaderboard", Icon:LayoutList,  label:`Board (${guesses.length})`},
-          ];
           const activeIdx = TABS.findIndex(t=>t.k===tab);
           return (
             <div className="bp-tabs" style={{ position:"relative", display:"flex", gap:4, background:"rgba(255,255,255,0.03)", border:"1px solid rgba(125,216,255,0.1)", borderRadius:18, padding:5, marginBottom:24, backdropFilter:"blur(12px)", animation:"slideUp .65s .14s ease both" }}>
-              {/* sliding pill */}
               <div style={{
                 position:"absolute", top:5, bottom:5,
                 width:`calc(${100/TABS.length}% - ${(4*(TABS.length-1)/TABS.length).toFixed(1)}px)`,
@@ -475,7 +638,7 @@ export default function BabyPool() {
               }}/>
               {TABS.map(({k,Icon,label})=>(
                 <button key={k} className="bp-tab" onClick={()=>{setTab(k);setSubmitted(false);}}
-                  style={{ flex:1, padding:"11px 4px", border:"none", borderRadius:14, background:"transparent", color:tab===k?"#7DD8FF":"rgba(125,190,230,0.5)", fontFamily:"inherit", fontWeight:600, fontSize:"0.82rem", cursor:"pointer", transition:"color .2s", display:"flex", alignItems:"center", justifyContent:"center", gap:5, position:"relative" }}>
+                  style={{ flex:1, padding:"11px 4px", border:"none", borderRadius:14, background:"transparent", color:tab===k ? (k==="winners" ? "rgba(255,213,80,0.95)" : "#7DD8FF") : "rgba(125,190,230,0.5)", fontFamily:"inherit", fontWeight:600, fontSize:"0.82rem", cursor:"pointer", transition:"color .2s", display:"flex", alignItems:"center", justifyContent:"center", gap:5, position:"relative" }}>
                   <Icon size={13} />{label}
                 </button>
               ))}
@@ -514,11 +677,9 @@ export default function BabyPool() {
                         <LengthPicker value={form.length} onChange={v=>setForm({...form,length:v})} />
                       </Field>
                     </div>
-
                     <Field label="Baby's Predicted Name *" icon={<Sparkles size={12}/>}>
                       <Input placeholder="What will they name him?" value={form.nameGuess} onChange={v=>setForm({...form,nameGuess:v})} />
                     </Field>
-
                     <Field label="Message for Rachel & Joey" icon={<Mail size={12}/>}>
                       <textarea className="bp-input" value={form.message} onChange={e=>setForm({...form,message:e.target.value})}
                         placeholder="Words of love, wisdom, or well wishes…"
@@ -565,43 +726,130 @@ export default function BabyPool() {
               )
               : (
                 <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-                  {[...guesses].reverse().map((g,i)=>(
-                    <div key={g.id} className="bp-card" style={{
-                      background:"rgba(255,255,255,0.038)", border:"1px solid rgba(125,216,255,0.1)",
-                      borderRadius:20, padding:"20px 22px", backdropFilter:"blur(14px)",
-                      boxShadow:"0 4px 24px rgba(0,0,0,0.28)",
-                      borderLeft:`3px solid ${CHIP_COLORS[i % CHIP_COLORS.length]}`,
-                      animation:"slideUp .4s ease both", animationDelay:`${i*.04}s`,
-                    }}>
-                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12, flexWrap:"wrap", gap:8 }}>
-                        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                          <span style={{ fontSize:"0.65rem", fontWeight:700, color:CHIP_COLORS[i % CHIP_COLORS.length], background:`${CHIP_COLORS[i % CHIP_COLORS.length]}18`, border:`1px solid ${CHIP_COLORS[i % CHIP_COLORS.length]}40`, borderRadius:6, padding:"2px 7px", letterSpacing:".04em" }}>#{guesses.length - i}</span>
-                          <span style={{ fontFamily:"'Fraunces',Georgia,serif", fontSize:"1.22rem", fontWeight:700, color:"#fff" }}>{g.name}</span>
-                        </div>
-                        <span style={{ fontSize:"0.7rem", color:"rgba(125,200,245,0.38)", fontWeight:500 }}>{new Date(g.submitted_at).toLocaleDateString()}</span>
-                      </div>
-                      <p style={{ color:"rgba(160,215,255,0.78)", fontSize:"1.1rem", lineHeight:1.7, marginBottom:(g.name_guess||g.message)?12:0 }}>
-                        Baby{g.name_guess ? <> <strong style={{ color:"#fff", fontStyle:"normal" }}>{g.name_guess}</strong></> : ""} will arrive on{" "}
-                        <strong style={{ color:"#fff", fontStyle:"normal" }}>{fmt(g.date)}</strong> at{" "}
-                        <strong style={{ color:"#fff", fontStyle:"normal" }}>{fmtT(g.time)}</strong>
-                        {g.length
-                          ? <>, measuring <strong style={{ color:"#fff", fontStyle:"normal" }}>{g.length}</strong> and weighing <strong style={{ color:"#fff", fontStyle:"normal" }}>{g.weight}</strong></>
-                          : <>, weighing <strong style={{ color:"#fff", fontStyle:"normal" }}>{g.weight}</strong></>
-                        }.
-                      </p>
-                      {g.message && (
-                        <div>
-                          <p style={{ fontSize:"0.7rem", fontWeight:700, color:"rgba(125,200,245,0.55)", textTransform:"uppercase", letterSpacing:".08em", marginBottom:6 }}>A note from {g.name}:</p>
-                          <div style={{ background:"rgba(125,216,255,0.05)", border:"1px solid rgba(125,216,255,0.09)", borderRadius:11, padding:"10px 14px", color:"rgba(155,210,250,0.72)", fontSize:"0.83rem", fontStyle:"italic", lineHeight:1.55 }}>
-                            "{g.message}"
+                  {[...guesses].reverse().map((g,i)=>{
+                    const isWinner = winnerIds.has(g.id);
+                    return (
+                      <div key={g.id} className="bp-card" style={{
+                        background:"rgba(255,255,255,0.038)", border:"1px solid rgba(125,216,255,0.1)",
+                        borderRadius:20, padding:"20px 22px", backdropFilter:"blur(14px)",
+                        boxShadow:"0 4px 24px rgba(0,0,0,0.28)",
+                        borderLeft:`3px solid ${CHIP_COLORS[i % CHIP_COLORS.length]}`,
+                        animation:"slideUp .4s ease both", animationDelay:`${i*.04}s`,
+                      }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12, flexWrap:"wrap", gap:8 }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                            <span style={{ fontSize:"0.65rem", fontWeight:700, color:CHIP_COLORS[i % CHIP_COLORS.length], background:`${CHIP_COLORS[i % CHIP_COLORS.length]}18`, border:`1px solid ${CHIP_COLORS[i % CHIP_COLORS.length]}40`, borderRadius:6, padding:"2px 7px", letterSpacing:".04em" }}>#{guesses.length - i}</span>
+                            <span style={{ fontFamily:"'Fraunces',Georgia,serif", fontSize:"1.22rem", fontWeight:700, color:"#fff" }}>{g.name}</span>
+                            {isWinner && (
+                              <span style={{ display:"inline-flex", alignItems:"center", gap:4, fontSize:"0.63rem", fontWeight:700, color:"rgba(255,213,80,0.9)", background:"rgba(255,213,80,0.1)", border:"1px solid rgba(255,213,80,0.3)", borderRadius:6, padding:"2px 7px", letterSpacing:".04em" }}>
+                                <Star size={9} fill="rgba(255,213,80,0.9)" strokeWidth={0} /> Winner
+                              </span>
+                            )}
                           </div>
+                          <span style={{ fontSize:"0.7rem", color:"rgba(125,200,245,0.38)", fontWeight:500 }}>{new Date(g.submitted_at).toLocaleDateString()}</span>
                         </div>
-                      )}
-                    </div>
-                  ))}
+                        <p style={{ color:"rgba(160,215,255,0.78)", fontSize:"1.1rem", lineHeight:1.7, marginBottom:(g.name_guess||g.message)?12:0 }}>
+                          Baby{g.name_guess ? <> <strong style={{ color:"#fff", fontStyle:"normal" }}>{g.name_guess}</strong></> : ""} will arrive on{" "}
+                          <strong style={{ color:"#fff", fontStyle:"normal" }}>{fmt(g.date)}</strong> at{" "}
+                          <strong style={{ color:"#fff", fontStyle:"normal" }}>{fmtT(g.time)}</strong>
+                          {g.length
+                            ? <>, measuring <strong style={{ color:"#fff", fontStyle:"normal" }}>{g.length}</strong> and weighing <strong style={{ color:"#fff", fontStyle:"normal" }}>{g.weight}</strong></>
+                            : <>, weighing <strong style={{ color:"#fff", fontStyle:"normal" }}>{g.weight}</strong></>
+                          }.
+                        </p>
+                        {g.message && (
+                          <div>
+                            <p style={{ fontSize:"0.7rem", fontWeight:700, color:"rgba(125,200,245,0.55)", textTransform:"uppercase", letterSpacing:".08em", marginBottom:6 }}>A note from {g.name}:</p>
+                            <div style={{ background:"rgba(125,216,255,0.05)", border:"1px solid rgba(125,216,255,0.09)", borderRadius:11, padding:"10px 14px", color:"rgba(155,210,250,0.72)", fontSize:"0.83rem", fontStyle:"italic", lineHeight:1.55 }}>
+                              "{g.message}"
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )
             }
+          </div>
+        )}
+
+        {/* ══ WINNERS ══ */}
+        {tab==="winners" && results?.revealed && (
+          <div style={{ animation:"slideUp .4s ease both" }}>
+            {/* Actual stats banner */}
+            <div style={{ background:"rgba(255,213,80,0.07)", border:"1px solid rgba(255,213,80,0.22)", borderRadius:20, padding:"20px 24px", marginBottom:20, backdropFilter:"blur(16px)" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+                <Trophy size={16} color="rgba(255,213,80,0.85)" />
+                <span style={{ fontSize:"0.72rem", fontWeight:700, color:"rgba(255,213,80,0.75)", textTransform:"uppercase", letterSpacing:".1em" }}>
+                  {results.actual_name ? `${results.actual_name} has arrived!` : "Baby has arrived!"}
+                </span>
+              </div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:10 }}>
+                {results.actual_date && (
+                  <span style={{ fontSize:"0.85rem", color:"rgba(255,230,140,0.9)" }}>
+                    <span style={{ color:"rgba(255,213,80,0.55)", marginRight:4 }}>📅</span>
+                    {fmt(results.actual_date)}{results.actual_time ? ` at ${fmtT(results.actual_time)}` : ""}
+                  </span>
+                )}
+                {results.actual_weight && (
+                  <span style={{ fontSize:"0.85rem", color:"rgba(255,230,140,0.9)" }}>
+                    <span style={{ color:"rgba(255,213,80,0.55)", marginRight:4 }}>⚖️</span>
+                    {results.actual_weight}
+                  </span>
+                )}
+                {results.actual_length && (
+                  <span style={{ fontSize:"0.85rem", color:"rgba(255,230,140,0.9)" }}>
+                    <span style={{ color:"rgba(255,213,80,0.55)", marginRight:4 }}>📏</span>
+                    {results.actual_length}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Winner cards */}
+            <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+              <WinnerCard
+                icon="🕒"
+                label="Closest Birth Moment"
+                winners={momentWinners}
+                guessDisplay={g => `${fmt(g.date)} at ${fmtT(g.time)}`}
+                actualDisplay={results.actual_date ? `${fmt(results.actual_date)}${results.actual_time ? ` at ${fmtT(results.actual_time)}` : ""}` : "—"}
+                deltaDisplay={score => fmtMinutes(score)}
+                emptyMsg="No moment data to score."
+                animDelay={0.05}
+              />
+              <WinnerCard
+                icon="⚖️"
+                label="Closest Weight"
+                winners={weightWinners}
+                guessDisplay={g => g.weight}
+                actualDisplay={results.actual_weight || "—"}
+                deltaDisplay={score => score === 0 ? "exact!" : `${score} oz off`}
+                emptyMsg="No weight data to score."
+                animDelay={0.1}
+              />
+              <WinnerCard
+                icon="📏"
+                label="Closest Length"
+                winners={lengthWinners}
+                guessDisplay={g => g.length}
+                actualDisplay={results.actual_length || "—"}
+                deltaDisplay={score => score === 0 ? "exact!" : `${score.toFixed(1)} in off`}
+                emptyMsg={!results.actual_length ? "Skipped — no actual length entered." : "Skipped — nobody guessed length."}
+                animDelay={0.15}
+              />
+              <WinnerCard
+                icon="✨"
+                label="Name Match"
+                winners={nameWinners}
+                guessDisplay={g => g.name_guess || "—"}
+                actualDisplay={results.actual_name || "—"}
+                deltaDisplay={null}
+                emptyMsg={results.actual_name ? `Nobody nailed it. The actual name is ${results.actual_name}.` : "No actual name entered yet."}
+                animDelay={0.2}
+              />
+            </div>
           </div>
         )}
 
@@ -642,11 +890,8 @@ export default function BabyPool() {
       {/* ── ADMIN DRAWER ── */}
       {adminOpen && (
         <>
-          {/* backdrop */}
           <div onClick={()=>setAdminOpen(false)} style={{ position:"fixed", inset:0, zIndex:300, background:"rgba(0,0,0,0.55)", backdropFilter:"blur(4px)", animation:"fadeIn .2s ease both" }} />
-          {/* drawer */}
           <div style={{ position:"fixed", bottom:0, left:0, right:0, zIndex:301, maxHeight:"85vh", overflowY:"auto", background:"linear-gradient(180deg,#0a1e3d 0%,#060e1e 100%)", border:"1px solid rgba(125,216,255,0.14)", borderBottom:"none", borderRadius:"24px 24px 0 0", padding:"28px 24px 48px", boxShadow:"0 -8px 48px rgba(0,0,0,0.6)", animation:"drawerUp .3s cubic-bezier(.4,0,.2,1) both" }}>
-            {/* drag handle */}
             <div style={{ width:40, height:4, borderRadius:2, background:"rgba(125,216,255,0.18)", margin:"0 auto 24px" }} />
 
             {!adminOk ? (
@@ -666,17 +911,65 @@ export default function BabyPool() {
             ) : (
               <div>
                 <h2 style={{ fontFamily:"'Fraunces',Georgia,serif", color:"#fff", fontSize:"1.75rem", marginBottom:22 }}>Pool Settings</h2>
-                <div style={{ display:"grid", gap:16, marginBottom:22 }}>
-                  <Field label="Baby's Name (if revealed)" icon={<Sparkles size={12}/>}><Input placeholder="Leave blank for the surprise" value={poolInfo.babyName} onChange={v=>setPoolInfo({...poolInfo,babyName:v})} /></Field>
-                </div>
-                <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:30 }}>
-                  <button onClick={()=>{ persist(guesses,poolInfo); setSavedMsg(true); setTimeout(()=>setSavedMsg(false),2500); }}
-                    style={{ background:"linear-gradient(135deg,#5BC4F5,#1A9FE0)", border:"none", color:"#fff", borderRadius:12, padding:"11px 26px", fontFamily:"inherit", fontWeight:700, cursor:"pointer", fontSize:"0.88rem", boxShadow:"0 4px 16px rgba(91,196,245,0.28)", display:"inline-flex", alignItems:"center", gap:8 }}>
-                    <Save size={15} />Save Changes
-                  </button>
-                  {savedMsg && <span style={{ fontSize:"0.82rem", color:"rgba(125,216,255,0.75)", fontWeight:600, animation:"slideUp .3s ease both" }}>Saved!</span>}
+
+                {/* ── Actual Results ── */}
+                <div style={{ marginBottom:28 }}>
+                  <h3 style={{ color:"rgba(255,213,80,0.75)", fontSize:"0.78rem", fontWeight:700, marginBottom:16, textTransform:"uppercase", letterSpacing:".08em" }}>Actual Results</h3>
+                  <div style={{ display:"grid", gap:14 }}>
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
+                      <Field label="Birth Date" icon={<Calendar size={12}/>}>
+                        <Input type="date" value={draftResults.actual_date} onChange={v=>setDraftResults(d=>({...d,actual_date:v}))} style={{ display:"block", width:"100%", minWidth:0 }} />
+                      </Field>
+                      <Field label="Birth Time" icon={<Clock size={12}/>}>
+                        <Input type="time" value={draftResults.actual_time} onChange={v=>setDraftResults(d=>({...d,actual_time:v}))} style={{ display:"block", width:"100%", minWidth:0 }} />
+                      </Field>
+                    </div>
+                    <Field label="Weight" icon={<Scale size={12}/>}>
+                      <WeightPicker value={draftResults.actual_weight} onChange={v=>setDraftResults(d=>({...d,actual_weight:v}))} />
+                    </Field>
+                    <Field label="Length" icon={<Ruler size={12}/>}>
+                      <LengthPicker value={draftResults.actual_length} onChange={v=>setDraftResults(d=>({...d,actual_length:v}))} />
+                    </Field>
+                    <Field label="Baby's Name" icon={<Sparkles size={12}/>}>
+                      <Input placeholder="The actual name" value={draftResults.actual_name} onChange={v=>setDraftResults(d=>({...d,actual_name:v}))} />
+                    </Field>
+                    {/* Reveal toggle */}
+                    <label style={{ display:"flex", alignItems:"center", gap:12, cursor:"pointer", padding:"12px 14px", background:"rgba(255,213,80,0.05)", border:"1px solid rgba(255,213,80,0.18)", borderRadius:12 }}>
+                      <div
+                        onClick={()=>setDraftResults(d=>({...d,revealed:!d.revealed}))}
+                        style={{
+                          width:44, height:24, borderRadius:12, flexShrink:0, cursor:"pointer",
+                          background: draftResults.revealed ? "rgba(255,213,80,0.7)" : "rgba(125,216,255,0.12)",
+                          border: draftResults.revealed ? "1px solid rgba(255,213,80,0.5)" : "1px solid rgba(125,216,255,0.2)",
+                          position:"relative", transition:"background .2s, border-color .2s",
+                        }}
+                      >
+                        <div style={{
+                          position:"absolute", top:3, left: draftResults.revealed ? 23 : 3,
+                          width:16, height:16, borderRadius:"50%", background:"#fff",
+                          transition:"left .2s", boxShadow:"0 1px 4px rgba(0,0,0,0.3)",
+                        }}/>
+                      </div>
+                      <div>
+                        <div style={{ fontSize:"0.85rem", fontWeight:700, color: draftResults.revealed ? "rgba(255,213,80,0.9)" : "rgba(125,200,245,0.7)" }}>
+                          Reveal Winners to Everyone
+                        </div>
+                        <div style={{ fontSize:"0.72rem", color:"rgba(125,200,245,0.4)", marginTop:2 }}>
+                          {draftResults.revealed ? "Winners tab is visible to all visitors" : "Winners tab is hidden until you reveal"}
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:14, marginTop:16 }}>
+                    <button onClick={saveResults} disabled={resultsSaving}
+                      style={{ background:"linear-gradient(135deg,rgba(255,213,80,0.7),rgba(220,170,40,0.8))", border:"none", color:"#1a1200", borderRadius:12, padding:"11px 26px", fontFamily:"inherit", fontWeight:700, cursor: resultsSaving ? "not-allowed" : "pointer", fontSize:"0.88rem", boxShadow:"0 4px 16px rgba(255,213,80,0.2)", display:"inline-flex", alignItems:"center", gap:8, opacity: resultsSaving ? 0.7 : 1 }}>
+                      <Save size={15} />{resultsSaving ? "Saving…" : "Save Results"}
+                    </button>
+                    {resultsSavedMsg && <span style={{ fontSize:"0.82rem", color:"rgba(255,213,80,0.8)", fontWeight:600, animation:"slideUp .3s ease both" }}>Saved!</span>}
+                  </div>
                 </div>
 
+                {/* ── Manage Entries ── */}
                 <div style={{ borderTop:"1px solid rgba(125,216,255,0.1)", paddingTop:22 }}>
                   <h3 style={{ color:"rgba(125,200,245,0.7)", fontSize:"0.78rem", fontWeight:700, marginBottom:14, textTransform:"uppercase", letterSpacing:".08em" }}>Manage Entries ({guesses.length})</h3>
                   {guesses.length===0
